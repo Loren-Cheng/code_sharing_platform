@@ -4,6 +4,8 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import platform.entity.Code;
+import platform.persistence.dao.CodeRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -96,14 +98,13 @@ public class CodeController {
 
     @PostMapping(value = "/api/code/new", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public Map<String, String> post(@RequestBody Code newI) throws InterruptedException {
+    public Map<String, String> post(@RequestBody Code newI) {
         Map<String, String> result = new ConcurrentHashMap<>();
-        int id = -1;
         LocalDateTime now = LocalDateTime.now();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String stringNow = now.format(formatter);
         newI.setDate(stringNow);
-        id = CodeRepository.addCodeReturnId(newI);
+        int id = CodeRepository.addCodeReturnId(newI);
         result.put("id", String.valueOf(id));
         return result;
     }

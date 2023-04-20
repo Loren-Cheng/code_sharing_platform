@@ -1,4 +1,4 @@
-package platform.controller;
+package platform.entity;
 
 
 public class Code {
