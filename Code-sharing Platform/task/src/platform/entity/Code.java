@@ -1,32 +1,25 @@
 package platform.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.*;
 
+import javax.persistence.*;
+
+@Entity
+@Table(name = "Code")
+@AllArgsConstructor
+@NoArgsConstructor
+@Getter
+@Setter
+@ToString
 public class Code {
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id", nullable = false)
+    @JsonIgnore
+    private Long id;
 
-    private String code;
-    private String date;
+    String code;
+    String date;
 
-    public Code() {
-    }
-
-    public Code(String code, String date) {
-        this.code = code;
-        this.date = date;
-    }
-
-    public String getCode() {
-        return code;
-    }
-
-    public void setCode(String code) {
-        this.code = code;
-    }
-
-    public String getDate() {
-        return date;
-    }
-
-    public void setDate(String date) {
-        this.date = date;
-    }
 }

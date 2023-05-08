@@ -1,11 +1,12 @@
 package platform.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import platform.api.CodeService;
 import platform.entity.Code;
-import platform.persistence.dao.CodeRepository;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -14,87 +15,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 public class CodeController {
+    private CodeService codeService;
 
-    @GetMapping(value = "/code", produces = MediaType.TEXT_HTML_VALUE)
-    @ResponseBody
-    public String getAllCode() {
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String formatted = now.format(formatter);
-        System.out.println(formatted);
-        return "<html>\n" +
-                "<head>\n" +
-                "    <title>Code</title>\n" +
-                "</head>\n" +
-                "<body>\n" +
-                "<span id=\"load_date\">" +
-                formatted +
-                "</span>" +
-                "<pre id=\"code_snippet\">" +
-                CodeRepository.getCode() +
-                "</pre>" +
-                "</body>\n" +
-                "</html>";
+    @Autowired
+    public CodeController(CodeService codeService) {
+        this.codeService = codeService;
     }
-
-    @GetMapping(value = "/code/latest", produces = MediaType.TEXT_HTML_VALUE)
-    public String showLatest10Code(Model model) {
-        List<Code> latest10Code = getLatest10Code();
-        model.addAttribute("latests",latest10Code);
-        return "latest";
-    }
-
-    @GetMapping(value = "/code/{id}", produces = MediaType.TEXT_HTML_VALUE)
-    public String showCodeN(Model model,@PathVariable int id) {
-        Map<String, String> codeN = getCodeById(id);
-        model.addAttribute("codeN",codeN);
-        return "codeN";
-    }
-
-    @GetMapping(value = "/api/code", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public Map<String, String> getCode() {
-        Map<String, String> map = new HashMap<>();
-        LocalDateTime now = LocalDateTime.now();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-        String formatted = now.format(formatter);
-        map.put("date", formatted);
-        map.put("code", CodeRepository.getCode());
-
-        return map;
-    }
-
-    @GetMapping(value = "/api/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public Map<String, String> getCodeById(@PathVariable int id) {
-        Map<String, String> map = new LinkedHashMap<>();
-
-        Code codeInId = CodeRepository.getCodeById(id);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-//        String formatted = codeInId.getDate().format(formatter);
-        map.put("code", codeInId.getCode());
-        map.put("date", codeInId.getDate());
-        return map;
-    }
-
-    @GetMapping(value = "/api/code/latest", produces = MediaType.APPLICATION_JSON_VALUE)
-    @ResponseBody
-    public List<Code> getLatest10Code() {
-        Map<Integer, Code> codeMap = CodeRepository.getCodeMap();
-        List<Code> list = new ArrayList<>();
-        int idNow = CodeRepository.getIdNext() - 1;
-        int counter = 10;
-        while (idNow != 0 && counter != 0) {
-            Code tmp = codeMap.get(idNow);
-            if (null != tmp) {
-                list.add(codeMap.get(idNow));
-                counter--;
-            }
-            idNow--;
-        }
-        return list;
-    }
-
 
     @PostMapping(value = "/api/code/new", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
@@ -104,10 +30,54 @@ public class CodeController {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String stringNow = now.format(formatter);
         newI.setDate(stringNow);
-        int id = CodeRepository.addCodeReturnId(newI);
+        Code code = codeService.save(newI);
+        Long id = code.getId();
         result.put("id", String.valueOf(id));
         return result;
     }
+
+    @GetMapping(value = "/api/code/{id}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public Map<String, String> getCodeById(@PathVariable int id) {
+        Map<String, String> map = new LinkedHashMap<>();
+        Code code = codeService.findById((long) id);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+//        String formatted = codeInMemInId.getDate().format(formatter);
+        map.put("code", code.getCode());
+        map.put("date", code.getDate());
+        return map;
+    }
+
+    @GetMapping(value = "/api/code/latest", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public List<Code> getLatest10Code() {
+        List<Code> codeList = codeService.findAll();
+        List<Code> list = new ArrayList<>();
+        codeList.sort((Code a, Code b) -> (Long.compare(b.getId(), a.getId())));
+        int count = Math.min(10, codeList.size());
+        for (int i = 0; i < count; i++) {
+            Optional<Code> tmpCode = Optional.ofNullable(codeList.get(i));
+            if (tmpCode.isPresent()) {
+                list.add(tmpCode.get());
+            }
+        }
+        return list;
+    }
+
+    @GetMapping(value = "/code/latest", produces = MediaType.TEXT_HTML_VALUE)
+    public String showLatest10Code(Model model) {
+        List<Code> latest10Code = getLatest10Code();
+        model.addAttribute("latests", latest10Code);
+        return "latest";
+    }
+
+    @GetMapping(value = "/code/{id}", produces = MediaType.TEXT_HTML_VALUE)
+    public String showCodeN(Model model, @PathVariable int id) {
+        Map<String, String> codeN = getCodeById(id);
+        model.addAttribute("codeN", codeN);
+        return "codeN";
+    }
+
 
     @GetMapping(value = "/code/new", produces = MediaType.TEXT_HTML_VALUE)
     @ResponseBody
@@ -125,6 +95,4 @@ public class CodeController {
                 "</body>\n" +
                 "</html>";
     }
-
-
 }
